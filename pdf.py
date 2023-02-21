@@ -234,7 +234,7 @@ class PDF:
         #print(text)
         for word in words:
             image = self.pdf_images[0]
-            #print(word)
+            print(word)
             path =  "out_put/output_%02d.bmp" % 99
             self.draw_rect(image,(word['x0'],word['top'],word['x1'],word['bottom']),self.page_scale)
             cv2.imwrite(path,image)
