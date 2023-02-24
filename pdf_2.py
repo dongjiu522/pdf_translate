@@ -14,11 +14,22 @@ import pdfplumber
 from googletrans import Translator
 
 
+class LangeTransformer:
+    def __init__(self):
+        self.trans = Translator()
+        return
+
+
+    def process(self,text):
+
+        result = self.trans .translate(text, dest='zh-cn', src='en')
+        return result
+
 class MY_PDF:
     def __init__(self):
         multiprocessing.freeze_support()
         self.set_pdf_dpi()
-
+        self.LangeTransformer = LangeTransformer()
 
         return
 
@@ -86,21 +97,26 @@ class MY_PDF:
 
             cv2.rectangle(image, (word_rect[0],word_rect[1]),(word_rect[2],word_rect[3]), (0, 0, 255), 1)
         cv2.imwrite(image_save_path,image)
-
+    def text_split(self,text,text_max_num = 200):
+        result = []
+        #text.
     def tttt(self,path,out_path):
         self.open_pdf(path)
         pdf_page_num = self.get_page_index_list()
         for page_index in pdf_page_num:
             print("[INFO] process pdf page : " + str(page_index))
-            page_image = self.get_page_image(page_index)
+            #page_image = self.get_page_image(page_index)
             page_words = self.get_page_words(page_index)
-
+            page_text  = self.get_page_text(page_index)
             page_words = self.conver_words_box_pos(page_words,self.pdf_size_scale)
-
+            ret = self.LangeTransformer.process(page_text)
+            #print(page_text)
+            print(ret)
             path = "pdf_%02d.bmp" % page_index
             save_image_path = os.path.join(out_path,path)
-            print(save_image_path)
-            self.draw_words_and_save(page_image,save_image_path,page_words)
+            #print(save_image_path)
+            #self.draw_words_and_save(page_image,save_image_path,page_words)
+
 
 
 
