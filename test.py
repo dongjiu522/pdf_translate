@@ -27,15 +27,19 @@ def test():
     auto_create_path(out_path)
 
     pdf = PDF_pdfium()
-    pdf = PDF_pdfplumber()
+    pdf.open(filepath)
+    pdf_page_num = pdf.get_page_number()
+    page_index = 0
+    page_scale = 4
+    page_mediabox,scale,image = pdf.get_page_image(page_index,page_scale)
+
     pdf = PDF_pdfminer3k()
     pdf.open(filepath)
-    page_number = pdf.get_page_number()
-    print(page_number)
-    page_MediaBox = pdf.get_page_MediaBox(0)
-    print(page_MediaBox)
-    page_MediaBox = pdf.get_page_text(0)
-    print(page_MediaBox)
+    page_object_text = pdf.get_page_text(page_index)
+    for obj in page_object_text:
+        obj.draw_box(image,page_scale)
+
+    pdf.auto_save_image(image,out_path,"1.bmp")
 
 
 test()

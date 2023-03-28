@@ -4,7 +4,9 @@ import sys
 import os
 import cv2
 import numpy as np
+import math
 import shutil
+from PIL import Image, ImageDraw, ImageFont
 
 import pypdfium2 as pdfium
 import multiprocessing
@@ -23,6 +25,18 @@ from pdfminer.pdfparser import PDFParser
 
 from googletrans import Translator
 
+class LangeTransformer:
+    def __init__(self):
+        self.trans = Translator()
+        return
+
+    def process_en_to_cn(self,text):
+        result = self.trans .translate(text, dest='zh-cn', src='en')
+        return result
+
+    def process_cn_to_en(self,text):
+        result = self.trans .translate(text, dest='en', src='zh-cn')
+        return result
 
 class PDF:
     def __init__(self):
@@ -102,334 +116,94 @@ class PDF:
             os.makedirs(FilePath)
 
 
-class PDF_pdfium(PDF):
-    def __init__(self):
-        super().__init__()
+class PDF_Object:
+    def __init__(self,page_index,mode,x0,y0,x1,y1,data=None,text=None,image=None):
+        self.page_index = page_index
+        self.mode = mode
 
-        return
-    def sample(self,path,password=''):
-        pdf = pdfium.PdfDocument(path,password=password)
-        version = pdf.get_version()  # get the PDF standard version
-        n_pages = len(pdf)  # get the number of pages in the document
+        self.x0 = x0
+        self.y0 = y0
+        self.x1 = x1
+        self.y1 = y1
 
-        page_indices = [i for i in range(n_pages)]  # all pages
-        renderer = pdf.render(
-            pdfium.PdfBitmap.to_numpy,
-            page_indices=page_indices,
-            scale=300 / 72,  # 300dpi resolution
-        )
-        out_put_path = "./pdfium_sampe"
-        for page_index, image in zip(page_indices, renderer):
-            name = "pdf_%02d.bmp" % page_index
-            self.auto_save_image(image,out_put_path,name)
+        #self.x0 = math.floor(x0)
+        #self.y0 = math.floor(y0)
+        #self.x1 = math.ceil(x1)
+        #self.y1 = math.ceil(y1)
 
-        for item in pdf.get_toc():
-
-            if item.n_kids == 0:
-                state = "*"
-            elif item.is_closed:
-                state = "-"
-            else:
-                state = "+"
-
-            if item.page_index is None:
-                target = "?"
-            else:
-                target = item.page_index + 1
-
-            print(
-                "    " * item.level +
-                "[%s] %s -> %s  # %s " % (
-                    state, item.title, target, item.view_mode,
-                )
-            )
-
-        page = pdf[0]
-
-        # Get page dimensions in PDF canvas units (1pt->1/72in by default)
-        width, height = page.get_size()
-        # Set the absolute page rotation to 90° clockwise
-        page.set_rotation(90)
-
-        # Locate objects on the page
-        for obj in page.get_objects():
-            print(obj.level, obj.type, obj.get_pos())
-
-        # Load a text page helper
-        textpage = page.get_textpage()
-
-        # Extract text from the whole page
-        text_all = textpage.get_text_range()
-        # Extract text from a specific rectangular area
-        text_part = textpage.get_text_bounded(left=50, bottom=100, right=width - 50, top=height - 100)
-
-        # Locate text on the page
-        searcher = textpage.search("something", match_case=False, match_whole_word=False)
-        # This will be a list of bounding boxes of the form (left, bottom, right, top)
-        first_occurrence = searcher.get_next()
-
-        pdf = pdfium.PdfDocument.new()
-
-        image = pdfium.PdfImage.new(pdf)
-        image.load_jpeg("./datas/123.jpg")
-        metadata = image.get_metadata()
-
-        matrix = pdfium.PdfMatrix().scale(metadata.width, metadata.height)
-        image.set_matrix(matrix)
-
-        page = pdf.new_page(metadata.width, metadata.height)
-        page.insert_obj(image)
-        page.gen_content()
-
-        # PDF 1.7 standard
-        #pdf.save("output.pdf", version=17)
-
-        return
-
-    def open(self,path,password=''):
-        self.pdf = pdfium.PdfDocument(path,password=password)
-        return True
-
-    def get_page_number(self):
-        return len(self.pdf)
-
-    def get_page_MediaBox(self,page_index = 0):
-        page = self.pdf.get_page(page_index)
-        page_mediabox = page.get_mediabox()
-        return page_mediabox
-
-    def get_page_chars(self,page_index):
-
-        return
-
-    def get_page_words(self,page_index):
-
-        return
-
-    def get_page_text(self, page_index):
-        page = self.pdf.get_page(page_index)
-        textpage = page.get_textpage()
-
-        text = textpage.get_text()
-        return text
-
-    def get_page_tables(self, page_index):
-
-        return
-
-    def get_page_image(self,page_index,scale = 1):
-        page = self.pdf.get_page(page_index)
-        page_mediabox = page.get_mediabox()
-        image = page.render_tonumpy(
-            scale=scale,  # 72dpi resolution
-            crop=(0, 0, 0, 0),  # no crop (form: left, right, bottom, top)
-            greyscale=False,  # coloured output
-            fill_colour=(255, 255, 255, 255),  # fill bitmap with white background before rendering (form: RGBA)
-            colour_scheme=None,  # no custom colour scheme
-            optimise_mode=pdfium.OptimiseMode.NONE,
-            prefer_bgrx=False
-        )
-        return page_mediabox,scale,image[0]
-
-
-
-
-
-class PDF_pdfplumber(PDF):
-    def __init__(self):
-        super().__init__()
-
-        return
-    def sample(self,path,password=''):
-        pdf = pdfplumber.open(path)
-        page01 = pdf.pages[0]  # 指定页码
-        text = page01.extract_text()
-        table1 = page01.extract_table()  # 提取单个表格
-        tables = page01.extract_tables()#提取多个表格
-        print(table1)
-        return
-
-    def open(self,path,password=''):
-        self.pdf = pdfplumber.open(path)
-        return True
-
-    def get_page_number(self):
-
-        return len(self.pdf.pages)
-
-
-    def get_page_chars(self,page_index):
-
-        return
-
-    def get_page_words(self,page_index):
-        page = self.pdf.pages[page_index]
-        words = page.extract_words()
-        page_words = []
-        for word in words:
-            word_rect = [word['x0'],word['top'],word['x1'],word['bottom']] ## x0,y0,x1,y1
-            word_text = word['text']
-            page_words.append((page_index,word_rect,word_text))
-        return page_words
-
-    def get_page_text(self, page_index):
-
-        return
-
-    def get_page_tables(self, page_index):
-
-        return
-
-    def get_page_images(self, page_index,scale = 1):
-
-        return
-
-
-
-
-class PDF_pdfminer3k(PDF):
-    def __init__(self):
-        super().__init__()
-
+        self.data = data
+        self.text = text
+        self.image = image
         return
     def __del__(self):
-
-        self.fp.close()
-
         return
 
-    def sample(self, path, password=''):
-
-        fp = open(path, 'rb')
-
-        # 从文件句柄创建一个pdf解析对象
-        parser = PDFParser(fp)
-
-        # fp.close()
-        # 创建pdf文档对象，存储文档结构
-        document = PDFDocument(parser, password)
-
-        # 创建一个pdf资源管理对象，存储共享资源
-        rsrcmgr = PDFResourceManager()
-
-        laparams = LAParams()
-
-        # 创建一个device对象
-        device = PDFPageAggregator(rsrcmgr, laparams=laparams)
-
-        # 创建一个解释对象
-        interpreter = PDFPageInterpreter(rsrcmgr, device)
-
-        # 处理包含在文档中的每一页
-        pages = PDFPage.create_pages(document)
-        for i, page in enumerate(pages):
-            interpreter.process_page(page)
-            layout = device.get_result()
-
-            for obj in layout:
-
-                if (isinstance(obj, LTTextBoxHorizontal)):
-                    text = obj.get_text()
-                    box = obj.bbox
-                    print(text)
-                    print(box)
-
-        fp.close()
+    def show_image_info(self, image_array):
+        print("show image info :")
+        print("* image shape   [c,h,w] = " + str(image_array.shape))
+        print("* image element type  = " + str(image_array.dtype))
+        print("* image range         = " + "[" + str(np.min(image_array)) + "," + str(np.max(image_array)) + "]")
+        print("* image mean          = " + str(np.mean(image_array)))
+        print("* image median        = " + str(np.median(image_array)))
         return
 
-    def open(self,path,password=''):
-        self.fp = open(path, 'rb')
-
-        self.parser = PDFParser(self.fp)
-
-        self.document = PDFDocument(self.parser, password)
-
-
-        self.resources = PDFResourceManager()
-
-        self.laparams = LAParams()
-
-        # 创建一个device对象
-        self.device = PDFPageAggregator(self.resources, laparams= self.laparams)
-
-        # 创建一个解释对象
-        self.interpreter = PDFPageInterpreter(self.resources, self.device)
-
-        # 处理包含在文档中的每一页
-        self.pages = []
-        for i, page in enumerate(PDFPage.create_pages(self.document)):
-            self.pages.append(page)
+    def print(self,page_scale=1):
+        print("############## obj start")
+        print("[mode] = " + str(self.mode))
+        print("[box ]")
+        x0, y0, x1, y1 = self.box_mul_scale(page_scale)
+        print((x0, y0, x1, y1), sep=' ', end='\n', file=sys.stdout, flush=False)
+        print("[data] data = " + str(self.data))
+        if self.mode == "image":
+            self.show_image_info(self.image)
+        else:
+            print("[image] image = " + str(self.image))
+        print("[text] text = " + str(self.text))
+        print("############## obj end")
 
 
-        return True
+    def box_mul_scale(self,page_scale):
+        #self.x0 = math.floor(x0)
+        #self.y0 = math.floor(y0)
+        #self.x1 = math.ceil(x1)
+        #self.y1 = math.ceil(y1)
 
+        return int(math.floor(self.x0 * page_scale)),\
+               int(math.floor(self.y0 * page_scale)),\
+               int(math.ceil(self.x1 * page_scale)),\
+               int(math.ceil(self.y1 * page_scale))
 
-    def get_page_number(self):
-        return len(self.pages)
+    def draw_box(self,page_image,page_scale = 1):
+        x0,y0,x1,y1 = self.box_mul_scale(page_scale)
+        cv2.rectangle(page_image, (x0, y0), (x1, y1), (0, 0, 255), 2)
 
-    def get_page_MediaBox(self,page_index = 0):
-        page = self.pages[page_index]
-        page_mediabox = page.mediabox
-        return page_mediabox
+    def draw_image(self,page_image,page_scale=1):
+        if self.mode != "image":
+            return
+        x0, y0, x1, y1 = self.box_mul_scale(page_scale)
+        image_resize = 0
+        box_w =  x1 - x0
+        box_h =  y1 - y0
+        cv2.resize(self.image, image_resize,(box_h,box_w))
+        page_image[x0:x1, y0:y1] = image_resize
 
-    def get_page_chars(self,page_index):
+    def cv2AddChineseText(self,page_image, text, position, textColor="black", textSize=16):
+        if (isinstance(page_image, np.ndarray)):  # 判断是否OpenCV图片类型
+            page_image = Image.fromarray(cv2.cvtColor(page_image, cv2.COLOR_BGR2RGB))
+        # 创建一个可以在给定图像上绘图的对象
+        draw = ImageDraw.Draw(page_image)
+        # 字体的格式
+        fontStyle = ImageFont.truetype("simsun.ttc", textSize, encoding="utf-8")
+        #fontStyle = ImageFont.truetype("STSONG.TTF", textSize, encoding="utf-8")
 
-        return
+        # 绘制文本
+        draw.text(position, text, textColor, font=fontStyle,spacing=5,align ="left")
+        # 转换回OpenCV格式
+        return cv2.cvtColor(np.asarray(page_image), cv2.COLOR_RGB2BGR)
 
-    def get_page_words(self,page_index):
+    def draw_text(self,page_image,page_scale=1):
+        if self.mode != "text":
+            return
+        x0, y0, x1, y1 = self.box_mul_scale(page_scale)
+        return self.cv2AddChineseText(page_image,self.text,(x0,y0))
 
-        return
-
-    def get_page_text(self, page_index):
-        page = self.pages[page_index]
-        self.interpreter.process_page(page)
-        layout = self.device.get_result()
-        for obj in layout:
-
-            if (isinstance(obj, LTTextBoxHorizontal)):
-                text = obj.get_text()
-                box = obj.bbox
-                print(box)
-        return
-
-    def get_page_tables(self, page_index):
-
-        return
-
-    def get_page_images(self, page_index,scale = 1):
-
-        return
-
-
-
-
-def auto_create_path(FilePath):
-    if os.path.exists(FilePath):
-        return
-    if os.path.isfile(FilePath):
-        FilePath = os.path.dirname(FilePath)
-    if os.path.exists(FilePath):
-        return
-    else:
-        os.makedirs(FilePath)
-
-def test():
-    filepath = "./datas/example.pdf"
-    out_path = "out_put"
-    if os.path.exists(out_path):
-        shutil.rmtree(out_path)
-    auto_create_path(out_path)
-
-    pdf = PDF_pdfminer3k()
-    #pdf = PDF_pdfium()
-    #pdf.sample(filepath)
-    pdf.open(filepath)
-    page_number = pdf.get_page_number()
-    print(page_number)
-    MediaBox = pdf.get_page_MediaBox()
-    print(MediaBox)
-
-    page_text = pdf.get_page_text(0)
-    print(page_text)
-
-test()
