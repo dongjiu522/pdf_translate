@@ -175,7 +175,9 @@ class PDF_Object:
 
     def draw_box(self,page_image,page_scale = 1):
         x0,y0,x1,y1 = self.box_mul_scale(page_scale)
+        print("box " + str( (x0, y0)))
         cv2.rectangle(page_image, (x0, y0), (x1, y1), (0, 0, 255), 2)
+        return page_image
 
     def draw_image(self,page_image,page_scale=1):
         if self.mode != "image":
@@ -187,7 +189,7 @@ class PDF_Object:
         cv2.resize(self.image, image_resize,(box_h,box_w))
         page_image[x0:x1, y0:y1] = image_resize
 
-    def cv2AddChineseText(self,page_image, text, position, textColor="black", textSize=16):
+    def cv2AddChineseText(self,page_image, text, position,textSize=16,textColor="black"):
         if (isinstance(page_image, np.ndarray)):  # 判断是否OpenCV图片类型
             page_image = Image.fromarray(cv2.cvtColor(page_image, cv2.COLOR_BGR2RGB))
         # 创建一个可以在给定图像上绘图的对象
@@ -195,15 +197,19 @@ class PDF_Object:
         # 字体的格式
         fontStyle = ImageFont.truetype("simsun.ttc", textSize, encoding="utf-8")
         #fontStyle = ImageFont.truetype("STSONG.TTF", textSize, encoding="utf-8")
-
+        #ImageDraw.textsize()
         # 绘制文本
+        #print("position = " + str(position))
         draw.text(position, text, textColor, font=fontStyle,spacing=5,align ="left")
         # 转换回OpenCV格式
-        return cv2.cvtColor(np.asarray(page_image), cv2.COLOR_RGB2BGR)
+        page_image_text_opencv = cv2.cvtColor(np.asarray(page_image), cv2.COLOR_RGB2BGR)
+        print("[draw] draw text done")
+        return page_image_text_opencv
 
     def draw_text(self,page_image,page_scale=1):
+        #print(self.mode)
         if self.mode != "text":
             return
         x0, y0, x1, y1 = self.box_mul_scale(page_scale)
-        return self.cv2AddChineseText(page_image,self.text,(x0,y0))
+        return self.cv2AddChineseText(page_image,self.text,(x0,y0),textSize=30)
 

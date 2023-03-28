@@ -35,11 +35,17 @@ def test():
 
     pdf = PDF_pdfminer3k()
     pdf.open(filepath)
+    print(image.shape)
     page_object_text = pdf.get_page_text(page_index)
+    image_copy = image.copy()
+    image_copy[:] = 255
+    #print(image_copy.shape)
     for obj in page_object_text:
-        obj.draw_box(image,page_scale)
+        image = obj.draw_box(image, page_scale)
+        image_copy = obj.draw_box(image_copy,page_scale)
+        image_copy = obj.draw_text(image_copy,page_scale)
 
     pdf.auto_save_image(image,out_path,"1.bmp")
-
+    pdf.auto_save_image(image_copy, out_path, "1_copy.bmp")
 
 test()
