@@ -7,6 +7,7 @@ import shutil
 from pdf_pdfium import  *
 from pdf_pdfplumber import  *
 from pdf_pdfminer3k import  *
+from pdf_PyPDF4 import  *
 
 
 def auto_create_path(FilePath):
@@ -41,11 +42,15 @@ def test():
     image_copy[:] = 255
     #print(image_copy.shape)
     for obj in page_object_text:
-        image = obj.draw_box(image, page_scale)
-        image_copy = obj.draw_box(image_copy,page_scale)
+        #image = obj.draw_box(image, page_scale)
+        #image_copy = obj.draw_box(image_copy,page_scale)
+        obj.translate_text()
         image_copy = obj.draw_text(image_copy,page_scale)
 
     pdf.auto_save_image(image,out_path,"1.bmp")
     pdf.auto_save_image(image_copy, out_path, "1_copy.bmp")
+
+    pdf = pdf_PyPDF4()
+    pdf.save_image_to_pdf(image,os.path.join(out_path,"mr.pdf"))
 
 test()

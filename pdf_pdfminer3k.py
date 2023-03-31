@@ -112,7 +112,7 @@ class PDF_pdfminer3k(PDF):
                 x1 = box[2]
                 y1 = page_mediabox_h - box[3]
 
-                if (isinstance(obj, LTTextBox)):
+                if (isinstance(obj, LTText)):
                     text = obj.get_text()
                     obj = PDF_Object(page_index,"text",\
                                      x0,y0,\

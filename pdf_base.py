@@ -31,11 +31,11 @@ class LangeTransformer:
         return
 
     def process_en_to_cn(self,text):
-        result = self.trans .translate(text, dest='zh-cn', src='en')
+        result = self.trans.translate(text, dest='zh-cn', src='en').text
         return result
 
     def process_cn_to_en(self,text):
-        result = self.trans .translate(text, dest='en', src='zh-cn')
+        result = self.trans.translate(text, dest='en', src='zh-cn').text
         return result
 
 class PDF:
@@ -138,6 +138,12 @@ class PDF_Object:
     def __del__(self):
         return
 
+    def translate_text(self):
+        if not hasattr(self,"translater"):
+            self.translater = LangeTransformer()
+        self.text = self.translater.process_en_to_cn(self.text)
+        print(self.text)
+
     def show_image_info(self, image_array):
         print("show image info :")
         print("* image shape   [c,h,w] = " + str(image_array.shape))
@@ -200,8 +206,27 @@ class PDF_Object:
         #ImageDraw.textsize()
         # 绘制文本
         #print("position = " + str(position))
-        draw.text(position, text, textColor, font=fontStyle,spacing=5,align ="left")
+
+        print("text" + str(position))
+        print("text" + str(position))
+        x0 = position[0]
+        y0 = position[1]
+        x1 = position[2]
+        y1 = position[3]
+        box_w = x1 - x0
+        box_h = y1 - y0
+
+        # 计算文本的宽度和高度
+        text_width, text_height = draw.multiline_textsize(text, font=fontStyle)
+
+        # 计算绘制文本时的左上角坐标
+        draw_box_x = (box_w - text_width) / 2
+        draw_box_y = (box_h - text_height) / 2
+        draw_box_x += x0
+        draw_box_y += y0
+        draw.multiline_text((draw_box_x,draw_box_y), text, textColor, font=fontStyle,spacing=5,align ="left")
         # 转换回OpenCV格式
+        draw.rectangle(position, outline="red")
         page_image_text_opencv = cv2.cvtColor(np.asarray(page_image), cv2.COLOR_RGB2BGR)
         print("[draw] draw text done")
         return page_image_text_opencv
@@ -211,5 +236,5 @@ class PDF_Object:
         if self.mode != "text":
             return
         x0, y0, x1, y1 = self.box_mul_scale(page_scale)
-        return self.cv2AddChineseText(page_image,self.text,(x0,y0),textSize=30)
+        return self.cv2AddChineseText(page_image,self.text,(x0, y0, x1, y1),textSize=30)
 
