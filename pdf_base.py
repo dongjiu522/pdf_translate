@@ -100,10 +100,43 @@ class PDF:
         path = os.path.join(image_save_path,image_save_name)
         cv2.imwrite(path,image)
 
+    def image_to_pdf(self,page_image,output_pdf_path):
+        if (isinstance(page_image, np.ndarray)):  # 判断是否OpenCV图片类型
+            page_image = Image.fromarray(cv2.cvtColor(page_image, cv2.COLOR_BGR2RGB))
+        page_image.save(output_pdf_path)
+
+    def images_to_pdf(self,page_images,output_pdf_path):
+        image_pdf = 0
+        image_list = []
+
+        for i in range(len(list(page_images))):
+            page_image = page_images[i]
+            if (isinstance(page_image, np.ndarray)):  # 判断是否OpenCV图片类型
+                page_image = Image.fromarray(cv2.cvtColor(page_image, cv2.COLOR_BGR2RGB))
+            if i == 0 :
+                image_pdf = page_image
+            else:
+                image_list.append(page_image)
+        image_pdf.save(output_pdf_path, save_all=True, append_images=image_list)
+
     def auto_save_image(self,image,path,name):
         self.auto_create_path(path)
         path = os.path.join(path,name)
         cv2.imwrite(path,image)
+
+    def auto_copy_file(self,file,path,name):
+        self.auto_create_path(path)
+        path = os.path.join(path,name)
+        shutil.copyfile(file,path)
+
+    def split_list(self,lst, chunk_size=10):
+        """
+        将一个大列表拆分成多个小列表
+        :param lst: 大列表
+        :param chunk_size: 每个小列表的大小，默认为10
+        :return: 包含多个小列表的新列表
+        """
+        return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
     def auto_create_path(self,FilePath):
         if os.path.exists(FilePath):

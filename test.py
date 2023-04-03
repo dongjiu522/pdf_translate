@@ -32,7 +32,8 @@ def test():
     pdf_page_num = pdf.get_page_number()
     page_index = 0
     page_scale = 4
-    page_mediabox,scale,image = pdf.get_page_image(page_index,page_scale)
+    page_mediabox, scale, image = pdf.get_page_image(page_index, page_scale)
+
 
     pdf = PDF_pdfminer3k()
     pdf.open(filepath)
@@ -41,16 +42,43 @@ def test():
     image_copy = image.copy()
     image_copy[:] = 255
     #print(image_copy.shape)
-    for obj in page_object_text:
+    #for obj in page_object_text:
         #image = obj.draw_box(image, page_scale)
         #image_copy = obj.draw_box(image_copy,page_scale)
-        obj.translate_text()
-        image_copy = obj.draw_text(image_copy,page_scale)
+        #obj.translate_text()
+        #image_copy = obj.draw_text(image_copy,page_scale)
 
-    pdf.auto_save_image(image,out_path,"1.bmp")
-    pdf.auto_save_image(image_copy, out_path, "1_copy.bmp")
+    #pdf.auto_save_image(image,out_path,"1.bmp")
+    #pdf.auto_save_image(image_copy, out_path, "1_copy.bmp")
+
+    images = []
+    images.append(image.copy())
+    images.append(image.copy())
+    images.append(image.copy())
+    pdf = PDF()
+    pdf.images_to_pdf(images,"./datas/out.pdf")
+
+def test_2():
+    filepath = "./datas/example.pdf"
+    out_path = "out_put"
+    if os.path.exists(out_path):
+        shutil.rmtree(out_path)
+    auto_create_path(out_path)
+
+    pdf = PDF_pdfium()
+    pdf.open(filepath)
+    pdf_page_num = pdf.get_page_number()
+    page_index = 0
+    page_scale = 4
+    page_mediabox, scale, image = pdf.get_page_image(page_index, page_scale)
 
     pdf = pdf_PyPDF4()
-    pdf.save_image_to_pdf(image,os.path.join(out_path,"mr.pdf"))
+    pdf_encrypted_out = "./datas/example.pdf"
+    pdf_img_out = "./datas/imgs.pdf"
+    #pdf.encrypted(filepath,pdf_encrypted_out,"123yh")
+    imgs = []
+    imgs.append(image)
+    pdf.append_image_to_pdf(pdf_img_out,imgs,pdf_encrypted_out)
 
-test()
+#test()
+test_2()
