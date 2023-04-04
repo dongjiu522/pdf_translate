@@ -41,14 +41,18 @@ def test():
     page_object_text = pdf.get_page_text(page_index)
     image_copy = image.copy()
     image_copy[:] = 255
-    #print(image_copy.shape)
-    #for obj in page_object_text:
-        #image = obj.draw_box(image, page_scale)
-        #image_copy = obj.draw_box(image_copy,page_scale)
-        #obj.translate_text()
-        #image_copy = obj.draw_text(image_copy,page_scale)
+    print(image_copy.shape)
+    image_copy_pil = Image.fromarray(image_copy)
 
-    #pdf.auto_save_image(image,out_path,"1.bmp")
+    for obj in page_object_text:
+        #image = obj.draw_box(image, page_scale)
+        #obj.draw_box_pil(image_copy_pil,page_scale)
+        #obj.translate_text()
+        obj.draw_text(image_copy_pil,"en",page_scale)
+        #break
+    image_copy_pil.save(os.path.join(out_path, "1_copy.bmp"))
+
+    pdf.auto_save_image(image,out_path,"1.bmp")
     #pdf.auto_save_image(image_copy, out_path, "1_copy.bmp")
 
     images = []
@@ -69,7 +73,7 @@ def test_2():
     pdf.open(filepath)
     pdf_page_num = pdf.get_page_number()
     page_index = 0
-    page_scale = 4
+    page_scale = 1
     page_mediabox, scale, image = pdf.get_page_image(page_index, page_scale)
 
     pdf = pdf_PyPDF4()
@@ -80,5 +84,5 @@ def test_2():
     imgs.append(image)
     pdf.append_image_to_pdf(pdf_img_out,imgs,pdf_encrypted_out)
 
-#test()
-test_2()
+test()
+#test_2()

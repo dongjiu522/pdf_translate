@@ -214,8 +214,14 @@ class PDF_Object:
 
     def draw_box(self,page_image,page_scale = 1):
         x0,y0,x1,y1 = self.box_mul_scale(page_scale)
-        print("box " + str( (x0, y0)))
+        #print("box " + str( (x0, y0)))
         cv2.rectangle(page_image, (x0, y0), (x1, y1), (0, 0, 255), 2)
+        return page_image
+
+    def draw_box_pil(self,page_image,page_scale = 1):
+        x0,y0,x1,y1 = self.box_mul_scale(page_scale)
+        draw = ImageDraw.Draw(page_image)
+        draw.rectangle((x0, y0, x1, y1), outline="blue")
         return page_image
 
     def draw_image(self,page_image,page_scale=1):
@@ -234,14 +240,15 @@ class PDF_Object:
         # 创建一个可以在给定图像上绘图的对象
         draw = ImageDraw.Draw(page_image)
         # 字体的格式
+        print("cv2AddChineseText")
         fontStyle = ImageFont.truetype("simsun.ttc", textSize, encoding="utf-8")
         #fontStyle = ImageFont.truetype("STSONG.TTF", textSize, encoding="utf-8")
         #ImageDraw.textsize()
         # 绘制文本
         #print("position = " + str(position))
 
-        print("text" + str(position))
-        print("text" + str(position))
+        #print("text" + str(position))
+        #print("text" + str(position))
         x0 = position[0]
         y0 = position[1]
         x1 = position[2]
@@ -264,10 +271,71 @@ class PDF_Object:
         print("[draw] draw text done")
         return page_image_text_opencv
 
-    def draw_text(self,page_image,page_scale=1):
+    def cv2AddEnglistText(self,page_image, text, position,textSize=16,textColor="black"):
+        fontStyle = ImageFont.truetype("simsun.ttc", textSize, encoding="utf-8")
+        return self.draw_text_with_wrap(page_image,position,text,fontStyle,textColor)
+
+    def draw_text_with_wrap(self,page_image_pil, box, text, font, color):
+        draw = ImageDraw.Draw(page_image_pil)
+        words = text.split()
+        lines = []
+        line = ""
+        draw.rectangle(box, outline="black")
+        x0 = box[0]
+        y0 = box[1]
+        x1 = box[2]
+        y1 = box[3]
+        box_w = x1 - x0
+        box_h = y1 - y0
+        for word in words:
+
+            line_and_word = line + " " + word
+            line_and_word_size = draw.textsize(line_and_word, font=font)
+            if line_and_word_size[0] <= box_w:
+                line = line_and_word
+                continue
+
+            sub_word_index = -1
+            for word_index in range(1, len(word)):
+                word1 = word[:word_index]
+                word2 = word[word_index:]
+                line_text_subword = line + " " + word1
+                line_text_subword_size = draw.textsize(line_text_subword, font=font)
+                if line_text_subword_size[0] <= box_w:
+                    sub_word_index = word_index
+                    continue
+                else:
+                    break
+            if sub_word_index != -1 and (sub_word_index > 0 and sub_word_index <= len(word)):
+                sub_word1 = word[:sub_word_index]
+                sub_word2 = word[sub_word_index:]
+                line = line + " " + sub_word1
+                lines.append(line)
+                line = "-" + sub_word2
+            else:
+                lines.append(line)
+                line = word
+
+        if line:
+           lines.append(line)
+
+
+        y = y1
+        for line in lines:
+            line_w,line_h = font.getsize(line)
+            draw.rectangle((x0,y,x0 +line_w,y + line_h ), outline="red")
+            draw.text((x0, y), line, font=font, fill=color)
+            y += line_h
+
+        return True
+
+    def draw_text(self,page_image,mode="en",page_scale=1):
         #print(self.mode)
         if self.mode != "text":
             return
         x0, y0, x1, y1 = self.box_mul_scale(page_scale)
-        return self.cv2AddChineseText(page_image,self.text,(x0, y0, x1, y1),textSize=30)
+        if mode == "en":
+            return self.cv2AddEnglistText(page_image,self.text,(x0, y0, x1, y1),textSize=30)
+        if mode == "zh":
+            return self.cv2AddChineseText(page_image,self.text,(x0, y0, x1, y1),textSize=30)
 
