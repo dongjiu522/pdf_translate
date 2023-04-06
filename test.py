@@ -43,12 +43,12 @@ def test():
     image_copy[:] = 255
     print(image_copy.shape)
     image_copy_pil = Image.fromarray(image_copy)
-
+    text_size = 16
     for obj in page_object_text:
         #image = obj.draw_box(image, page_scale)
         #obj.draw_box_pil(image_copy_pil,page_scale)
-        #obj.translate_text()
-        obj.draw_text(image_copy_pil,"en",page_scale)
+        obj.print()
+        text_size = obj.draw_text(image_copy_pil,"en",page_scale,text_size)
         #break
     image_copy_pil.save(os.path.join(out_path, "1_copy.bmp"))
 

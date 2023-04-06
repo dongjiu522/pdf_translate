@@ -158,6 +158,7 @@ class PDF_Object:
         self.y0 = y0
         self.x1 = x1
         self.y1 = y1
+        self.font_mode ="simsun.ttc"
 
         #self.x0 = math.floor(x0)
         #self.y0 = math.floor(y0)
@@ -233,6 +234,24 @@ class PDF_Object:
         box_h =  y1 - y0
         cv2.resize(self.image, image_resize,(box_h,box_w))
         page_image[x0:x1, y0:y1] = image_resize
+    def check_box2_in_box1(self,box1,box2):
+        box1_x0 = box1[0]
+        box1_y0 = box1[1]
+        box1_x1 = box1[2]
+        box1_y1 = box1[3]
+        box1_w = box1_x1 - box1_x0
+        box1_h = box1_y1 - box1_y0
+
+        box2_x0 = box2[0]
+        box2_y0 = box2[1]
+        box2_x1 = box2[2]
+        box2_y1 = box2[3]
+        box2_w = box2_x1 - box2_x0
+        box2_h = box2_y1 - box2_y0
+        is_in_box1 =    box1_x0 <= box2_x0 and box1_y0 <= box2_y0 and \
+                        box1_x1 >= box2_x1 and box1_y1 >= box1_y1
+        scale = (box2_w * box2_h) / (box1_w * box1_h)
+        return scale , is_in_box1
 
     def cv2AddChineseText(self,page_image, text, position,textSize=16,textColor="black"):
         if (isinstance(page_image, np.ndarray)):  # 判断是否OpenCV图片类型
@@ -272,21 +291,19 @@ class PDF_Object:
         return page_image_text_opencv
 
     def cv2AddEnglistText(self,page_image, text, position,textSize=16,textColor="black"):
-        fontStyle = ImageFont.truetype("simsun.ttc", textSize, encoding="utf-8")
-        return self.draw_text_with_wrap(page_image,position,text,fontStyle,textColor)
 
-    def draw_text_with_wrap(self,page_image_pil, box, text, font, color):
-        draw = ImageDraw.Draw(page_image_pil)
-        words = text.split()
+        return self.draw_text_en_in_box(page_image,position,text,textSize,textColor)
+
+    def words_to_lines_with_box_and_font(self,draw,box,words,font):
         lines = []
         line = ""
-        draw.rectangle(box, outline="black")
         x0 = box[0]
         y0 = box[1]
         x1 = box[2]
         y1 = box[3]
         box_w = x1 - x0
         box_h = y1 - y0
+
         for word in words:
 
             line_and_word = line + " " + word
@@ -319,23 +336,107 @@ class PDF_Object:
         if line:
            lines.append(line)
 
+        return lines
 
-        y = y1
+    def get_pil_image_font(self,font_size):
+        font_mode = self.font_mode
+        font = ImageFont.truetype(font_mode, font_size, encoding="utf-8")
+        return font
+
+    def text_to_lines_in_box_with_text_font_size(self,pil_image_draw,box,text,font_size):
+        x0 = box[0]
+        y0 = box[1]
+        x1 = box[2]
+        y1 = box[3]
+        words = text.split()
+        draw = pil_image_draw
+        font = self.get_pil_image_font(font_size)
+        lines = self.words_to_lines_with_box_and_font(draw,box,words,font)
+
+        lines_h = 0
+
         for line in lines:
             line_w,line_h = font.getsize(line)
-            draw.rectangle((x0,y,x0 +line_w,y + line_h ), outline="red")
+            lines_h += line_h
+
+        return (x0,y0,x1,y0+lines_h),font_size
+
+    def find_text_size_adapte_box(self,pil_image_draw,box,text,textSize):
+        text_font_size = textSize
+        find_font_size = False
+        box_scale = 0
+        do_while_num = 0
+        while  find_font_size != True:
+            do_while_num += 1
+            is_in_box = False
+            box_out,text_font_size= \
+            self.text_to_lines_in_box_with_text_font_size(pil_image_draw,box,text,text_font_size)
+            box_scale,is_in_box = self.check_box2_in_box1(box,box_out)
+            print("is_in_box = " + str(is_in_box))
+            print("box_scale = " + str(box_scale))
+            print("text_font_size = " + str(text_font_size))
+
+            if is_in_box == True and box_scale <= 1:
+                if do_while_num == 1:
+                    text_font_size = int(text_font_size * (1/box_scale)) + 1
+                    continue
+                find_font_size = True
+                break
+
+            if box_scale <= 1:
+                text_font_size = int(text_font_size * (1 / box_scale)) + 1
+                continue
+            else:
+                text_font_size = text_font_size -1
+
+
+
+
+
+        print("box_scale = " + str(box_scale))
+        print("is_in_box = " + str(is_in_box))
+        return text_font_size,box_scale
+
+    def draw_text_en_in_box(self,page_image_pil, box, text, textSize, color):
+        draw = ImageDraw.Draw(page_image_pil)
+        draw.rectangle(box, outline="blue",width=4)
+
+        x0 = box[0]
+        y0 = box[1]
+        x1 = box[2]
+        y1 = box[3]
+
+
+        font_Size,box_scale = self.find_text_size_adapte_box(draw,box,text,textSize)
+        print("[INOF] font_Size = " + str(font_Size))
+        print("[INOF] box_scale = " + str(box_scale))
+
+        font = self.get_pil_image_font(font_Size)
+        words = text.split()
+        lines = self.words_to_lines_with_box_and_font(draw,box,words,font)
+
+        y = y0
+        print(lines)
+        lines_h =0
+        for line in lines:
+            print(line)
+            line_w,line_h = font.getsize(line)
+            #draw.rectangle((x0,y,x0 +line_w,y + line_h ), outline="red")
             draw.text((x0, y), line, font=font, fill=color)
             y += line_h
+            lines_h += line_h
+        #draw.rectangle((x0, y0, x1, y0 + lines_h), outline="red",width=2)
 
-        return True
+        return font_Size
 
-    def draw_text(self,page_image,mode="en",page_scale=1):
+    def draw_text(self,page_image,mode="en",page_scale=1,textSize=16):
         #print(self.mode)
         if self.mode != "text":
             return
         x0, y0, x1, y1 = self.box_mul_scale(page_scale)
+        #print("draw_text x0 = " + )
         if mode == "en":
-            return self.cv2AddEnglistText(page_image,self.text,(x0, y0, x1, y1),textSize=30)
+            return self.cv2AddEnglistText(page_image,self.text,(x0, y0, x1, y1),textSize)
         if mode == "zh":
-            return self.cv2AddChineseText(page_image,self.text,(x0, y0, x1, y1),textSize=30)
+            return self.cv2AddChineseText(page_image,self.text,(x0, y0, x1, y1),textSize)
 
