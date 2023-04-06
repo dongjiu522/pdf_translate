@@ -107,10 +107,11 @@ class PDF_pdfminer3k(PDF):
             objs = []
             for obj in layout:
                 box = obj.bbox
+
                 x0 = box[0]
-                y0 = page_mediabox_h - box[1]
+                y0 = page_mediabox_h - box[3]
                 x1 = box[2]
-                y1 = page_mediabox_h - box[3]
+                y1 = page_mediabox_h - box[1]
 
                 if (isinstance(obj, LTText)):
                     text = obj.get_text()
